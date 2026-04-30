@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import FacialCapture from '@/Components/FacialCapture';
 
 export default function Dashboard({ auth, games }) {
     return (
@@ -15,6 +16,10 @@ export default function Dashboard({ auth, games }) {
                         <div className="p-6 text-gray-900">
                             ¡Bienvenido, {auth.user.name}!
                         </div>
+                    </div>
+
+                    <div className="mb-8">
+                        <FacialCapture />
                     </div>
 
                     <h3 className="text-2xl font-bold text-gray-800 mb-6">Juegos Disponibles</h3>

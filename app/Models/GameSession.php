@@ -11,14 +11,19 @@ class GameSession extends Model
         'game_id',
         'started_at',
         'ended_at',
-        'score'
+        'score',
+        'emotion',
+        'confidence',
+        'emotion_detected_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'started_at' => 'datetime',
-            'ended_at' => 'datetime',
+            'started_at'          => 'datetime',
+            'ended_at'            => 'datetime',
+            'emotion_detected_at' => 'datetime',
+            'confidence'          => 'decimal:4',
         ];
     }
 

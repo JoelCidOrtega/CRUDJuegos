@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import { useRef } from 'react';
+import EmotionTracker from '@/Components/EmotionTracker';
 
 export default function PlayGame({ auth, game }) {
     const iframeRef = useRef(null);
@@ -28,6 +29,7 @@ export default function PlayGame({ auth, game }) {
             }
         >
             <Head title={`Jugando ${game.title}`} />
+            <EmotionTracker gameId={game.id} />
 
             <div className="py-6">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">

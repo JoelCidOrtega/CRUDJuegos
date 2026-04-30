@@ -31,6 +31,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Reconocimiento Facial y Sesiones
+    Route::post('/facial-verify', [\App\Http\Controllers\FacialVerificationController::class, 'verify'])->name('facial.verify');
+    Route::post('/game-session/emotion', [\App\Http\Controllers\GameSessionController::class, 'saveEmotion'])->name('game.emotion.save');
+
     // Rutas del CRM protegidas
     Route::middleware('role:administrador,gestor')->group(function () {
         Route::resource('crm-games', GameController::class)->parameters(['crm-games' => 'game'])->names('games');
