@@ -29,16 +29,18 @@ export default function PlayGame({ auth, game }) {
             }
         >
             <Head title={`Jugando ${game.title}`} />
+
+            {/* Aquí llamas al componente que hace la magia de forma silenciosa */}
             <EmotionTracker gameId={game.id} />
 
             <div className="py-6">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-black rounded-lg shadow-xl overflow-hidden relative" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
                         {game.url ? (
-                            <iframe 
+                            <iframe
                                 ref={iframeRef}
-                                src={game.url} 
-                                className="w-full h-full border-0" 
+                                src={game.url}
+                                className="w-full h-full border-0"
                                 title={game.title}
                                 onLoad={handleIframeLoad}
                                 allowFullScreen
