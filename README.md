@@ -1,75 +1,48 @@
-# CRM de Juegos con Laravel y React (Inertia)
+# Integración de Arquitectura Avanzada: MCP y RabbitMQ en Laravel
 
-Este proyecto implementa una plataforma web completa de gestión y ejecución de juegos, actuando como un **CRM internamente** y como una **plataforma de juego externamente**. 
+Este documento detalla la implementación de una arquitectura orientada a microservicios y asistencia inteligente para el proyecto `CRUDJuegos`. El objetivo de esta integración es acercar el sistema a un entorno real de producción, abandonando el enfoque monolítico tradicional.
 
-Cumple con todos los lineamientos establecidos para el módulo 0613, separando con claridad las responsabilidades, utilizando buenas prácticas y proporcionando una API funcional para interactuar con juegos cliente desarrollados en Three.js.
+## Justificación de la Arquitectura
 
-## Arquitectura y Tecnologías
-- **Backend:** Laravel 11. Se encarga de la lógica de negocio, autenticación, autorización (roles), gestión de base de datos (Eloquent) y exposición de endpoints HTTP.
-- **Frontend CRM & Plataforma:** React + Inertia.js (Laravel Breeze). Se utiliza para construir una interfaz moderna e interactiva sin las complicaciones de una SPA separada (Single Page Application).
-- **Base de Datos:** SQLite (configurada de inicio para facilidad de prueba local, escalable a PostgreSQL fácilmente editando `.env`).
-- **Autenticación:** Laravel session para el panel intermedio y Laravel Sanctum para proteger las llamadas a la API de los juegos.
+Nuestra arquitectura se divide en tres pilares fundamentales para garantizar el desacoplamiento y la automatización:
 
-## Características y Fases Implementadas
+*   **Laravel y GitHub (El Núcleo):** Laravel se mantiene como el director del sistema (autenticación, API, base de datos), mientras que GitHub centraliza el código y el control de versiones.
+*   **Servidor MCP de GitHub (Asistencia Inteligente):** En lugar de utilizar la IA como un simple diccionario desconectado, hemos implementado el protocolo MCP (Model Context Protocol). Esto añade una capa de apoyo inteligente que permite a nuestro asistente (Claude) leer el repositorio, gestionar *issues* y analizar código de forma nativa.
+*   **RabbitMQ (Capa de Eventos):** Se introduce para distribuir eventos relevantes del sistema (ej. finalización de validaciones o apertura de Pull Requests) de forma asíncrona, evitando bloquear el flujo principal de Laravel.
 
-### Base de datos, ORM y Autenticación
-El sistema tiene integrado **Laravel Breeze**.
-Se han introducido **Roles de Usuario**, gestionados mediante una tabla intermedia `role_user` vinculando el modelo `User` con `Role`. 
-Roles definidos:
-- **Administrador:** Acceso completo.
-- **Gestor:** Puede crear, modificar y publicar juegos.
-- **Jugador:** Solo puede acceder al listado de juegos publicados y jugar.
+---
 
-*Para probar la plataforma se generaron usuarios con contraseñas por defecto (`password`) mediante `UserSeeder`.*
+## Proceso de Implementación
 
-### Separación estricta entre Web y API
-- Las rutas para el CRM y plataformas están definidas en `routes/web.php` y devuelven componentes de React mediante `Inertia`. Las rutas de administración están protegidas por un middleware propio `CheckRole`.
-- La lógica que consume el juego Three.js (iniciar sesión, enviar puntaje) reside exclusivamente en `routes/api.php` y devuelve JSON puro. Están protegidas mediante `auth:sanctum`.
+### Paso 1: Preparación del Entorno Local
+Para mantener un flujo de trabajo organizado, se ha trabajado sobre una rama específica dedicada exclusivamente a esta característica, separándola del entorno de producción principal.
 
-### Experiencia del CRM (Gestión de Juegos)
-Los gestores pueden realizar un CRUD completo sobre el modelo `Game` (con los campos de título, descripción, `is_published`, URL, y creador).
-- Se implementaron métodos para asegurar que el panel CRM solo reciba a usuarios autorizados usando el middleware creado en `App\Http\Middleware\CheckRole`.
-- El CRM permite previsualizar el juego cargándolo de forma similar a como lo verá el jugador.
+![Preparación de la rama](ruta/a/tu/captura_1_git_checkout.png)
 
-### Experiencia del Jugador (Plataforma y Sesiones)
-El jugador inicia sesión y se dirige al "Dashboard", donde únicamente ve los juegos marcados como `is_published = true`. 
-Al seleccionar "Jugar Ahora", el juego arranca su vista `PlayGame` cargando la URL (o el iframe configurado).
+### Paso 2: Configuración del Servidor MCP de GitHub
+Para permitir que nuestro cliente de IA interactúe con el repositorio, levantamos el servidor oficial `github-mcp-server` mediante Docker. 
 
-### Comunicación Cliente-Servidor (Three.js a Laravel)
-Para conectar el juego (Three.js) con el backend, la vista inyecta parámetros como un mensaje PostMessage (con `user_id` y `game_id`). 
-El juego cliente debe realizar llamadas `fetch` autenticadas al servidor (usando credenciales incluidas/sanctum):
-1. `POST /api/game-sessions/start`: Registra en `game_sessions` una nueva partida y devuelve un ID de sesión.
-2. `POST /api/game-sessions/{id}/end`: Cierra la sesión incluyendo métricas básicas (como `score`).
+Primero, generamos un *Personal Access Token* (Classic) en GitHub aplicando el principio de mínimos privilegios (solo acceso al *scope* `repo`).
 
-## Instalación y Arranque Local
+![Permisos del Token GitHub](ruta/a/tu/captura_3_token_scopes.png)
 
-Asegúrate de tener PHP 8.3+, Composer y Node.js instalados.
+A continuación, inyectamos el token como variable de entorno y ejecutamos el contenedor Docker, estableciendo la conexión con los servidores de GitHub.
 
-1. **Instalar dependencias de servidor:**
-   ```bash
-   composer install
-   ```
+![Servidor MCP Ejecutándose](ruta/a/tu/captura_5_docker_mcp.png)
 
-2. **Instalar dependencias de cliente (React/Vite):**
-   ```bash
-   npm install
-   ```
+### Paso 3: Conexión con el Cliente IA (VS Code)
+Para integrar esta arquitectura en nuestro flujo diario, configuramos el cliente de Claude dentro de Visual Studio Code. Mediante la edición de la configuración MCP global, le otorgamos al asistente las directrices para ejecutar el contenedor Docker y utilizar nuestras credenciales.
 
-3. **Configurar el archivo de entorno (.env):**
-   *(Por defecto el sistema está preconfigurado para SQLite, por lo que no es necesario instalar un motor de BD adicional para la evaluación local).*
+![Configuración mcp.json en VS Code](ruta/a/tu/captura_6_mcp_json.png)
 
-4. **Migrar y popular la BD (Opcional, ya se ejecutó):**
-   ```bash
-   php artisan migrate:fresh --seed
-   ```
+### Paso 4: Desacoplamiento con RabbitMQ
+Para la gestión de eventos asíncronos del proyecto, levantamos un broker de mensajería RabbitMQ en un contenedor Docker, exponiendo tanto el puerto de comunicación (5672) como el panel de administración (15672).
 
-5. **Levantar servicios en dos pestañas diferentes del terminal:**
-   ```bash
-   # Terminal 1: Inicia el Backend PHP
-   php artisan serve
-   
-   # Terminal 2: Inicia Vite para compilar React
-   npm run dev
-   ```
+![Despliegue de RabbitMQ](ruta/a/tu/captura_7_docker_rabbitmq.png)
 
-Al entrar en `http://localhost:8000/` serás redirigido al portal. Usa las credenciales sembradas creadas dinámicamente (`admin@example.com`, `gestor@example.com`, o `jugador@example.com` - contraseña: `password`) para probar la plataforma como los diferentes roles.
+### Paso 5: Prueba de Funcionamiento y Validación
+Una vez conectados todos los componentes, realizamos una prueba de fuego pidiendo a Claude desde VS Code que utilizara sus herramientas MCP para escanear nuestro repositorio local. 
+
+Como se observa en la evidencia, la IA fue capaz de leer la estructura de ramas del proyecto (detectando `feature/integracion-mcp-rabbitmq` y `main`) de forma autónoma, validando así el éxito de la integración de toda la arquitectura.
+
+![Prueba exitosa de lectura del repositorio con Claude](ruta/a/tu/captura_8_claude_chat.png)
